@@ -32,7 +32,6 @@ enum DetectionState: Equatable {
 class DamageDetectionViewModel {
     var state: DetectionState = .idle
 
-    private var classifierModel: VNCoreMLModel?
     private var detectorModel: VNCoreMLModel?
 
     init() {
@@ -44,17 +43,12 @@ class DamageDetectionViewModel {
         #endif
 
         do {
-            let classifierConfig = MLModelConfiguration()
-            classifierConfig.computeUnits = computeUnits
-            let classifier = try DamageClassifier(configuration: classifierConfig)
-            classifierModel = try VNCoreMLModel(for: classifier.model)
-
             let detectorConfig = MLModelConfiguration()
             detectorConfig.computeUnits = computeUnits
             let detector = try DamageDetector(configuration: detectorConfig)
             detectorModel = try VNCoreMLModel(for: detector.model)
         } catch {
-            print("[DD] Failed to load CoreML models: \(error)")
+            print("[DD] Failed to load CoreML detector model: \(error)")
         }
     }
 
@@ -69,19 +63,6 @@ class DamageDetectionViewModel {
 
         print("[DD] Got CGImage: \(cgImage.width)x\(cgImage.height)")
 
-        // Step 1: Run classifier
-        let classifierResult = await runClassifier(on: cgImage)
-        print("[DD] Classifier result: \(classifierResult)")
-
-        switch classifierResult {
-        case .noDamage:
-            state = .noDamage
-            return
-        case .hasDamage, .error:
-            break
-        }
-
-        // Step 2: Run detector
         let detections = await runDetector(on: cgImage)
 
         if detections.isEmpty {
@@ -91,74 +72,7 @@ class DamageDetectionViewModel {
         }
     }
 
-    // MARK: - Classifier
-
-    private enum ClassifierResult {
-        case hasDamage, noDamage, error
-    }
-
-    private func runClassifier(on cgImage: CGImage) async -> ClassifierResult {
-        guard let model = classifierModel else {
-            print("[DD] Classifier model not loaded")
-            return .error
-        }
-
-        return await withCheckedContinuation { continuation in
-            let request = VNCoreMLRequest(model: model) { request, error in
-                if let error {
-                    print("[DD] Classifier request error: \(error)")
-                    continuation.resume(returning: .error)
-                    return
-                }
-
-                guard let results = request.results, !results.isEmpty else {
-                    print("[DD] Classifier returned no results")
-                    continuation.resume(returning: .error)
-                    return
-                }
-
-                print("[DD] Classifier result types: \(results.map { type(of: $0) })")
-
-                // Try 1: Raw feature value (single logit)
-                if let featureResults = results as? [VNCoreMLFeatureValueObservation],
-                   let multiArray = featureResults.first?.featureValue.multiArrayValue {
-                    let logit = multiArray[0].floatValue
-                    let sigmoid = 1.0 / (1.0 + exp(-logit))
-                    print("[DD] Classifier logit=\(logit) sigmoid=\(sigmoid)")
-                    // damage=0, no_damage=1 → sigmoid < 0.5 means damage
-                    let hasDamage = sigmoid < 0.5
-                    print("[DD] Classifier logit=\(logit) sigmoid=\(sigmoid) → \(hasDamage ? "damage" : "no_damage")")
-                    continuation.resume(returning: hasDamage ? .hasDamage : .noDamage)
-                    return
-                }
-
-                // Try 2: Classification observation (if model is wrapped as classifier)
-                if let classResults = results as? [VNClassificationObservation],
-                   let top = classResults.first {
-                    print("[DD] Classifier top label=\(top.identifier) confidence=\(top.confidence)")
-                    let isDamage = top.identifier.lowercased().contains("damage") && !top.identifier.lowercased().contains("no")
-                        || top.identifier == "0"
-                    continuation.resume(returning: isDamage ? .hasDamage : .noDamage)
-                    return
-                }
-
-                // Unknown result format — log and fail-open
-                print("[DD] Classifier unknown result format: \(results)")
-                continuation.resume(returning: .error)
-            }
-
-            request.imageCropAndScaleOption = .scaleFill
-
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-            do {
-                try handler.perform([request])
-            } catch {
-                print("[DD] Classifier perform error: \(error)")
-                continuation.resume(returning: .error)
-            }
-        }
-    }
-
+    
     // MARK: - Detector
 
     private func runDetector(on cgImage: CGImage) async -> [Detection] {

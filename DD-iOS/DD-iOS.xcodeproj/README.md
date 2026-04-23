@@ -27,3 +27,12 @@ A fast, on‑device app that detects visible car damage in a photo.
 - Performance on older devices: Consider smaller detector input, model quantization, and keep the classifier gate.
 - Testing & CI: Add unit/snapshot tests (e.g., box mapping) and a simple CI pipeline (Xcode Cloud or GitHub Actions).
 
+
+
+
+Update_I:
+- Image input via camera, photo library, or Files.
+- A YOLO-style detector returns bounding boxes, labels, and confidences for specific damage types.
+- If no boxes are returned above the confidence threshold, the image is reported as undamaged.
+- Vision + Core ML handle preprocessing/inference; results are normalized to [0..1] with top-left origin for overlays.
+- SwiftUI drives the UI; async/await wraps Vision requests; state updates trigger the results view.
