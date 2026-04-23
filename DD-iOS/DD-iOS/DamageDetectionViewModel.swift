@@ -125,8 +125,10 @@ class DamageDetectionViewModel {
                     let logit = multiArray[0].floatValue
                     let sigmoid = 1.0 / (1.0 + exp(-logit))
                     print("[DD] Classifier logit=\(logit) sigmoid=\(sigmoid)")
-                    // Empirically verified: >= 0.5 → damage, < 0.5 → no_damage
-                    continuation.resume(returning: sigmoid >= 0.5 ? .hasDamage : .noDamage)
+                    // damage=0, no_damage=1 → sigmoid < 0.5 means damage
+                    let hasDamage = sigmoid < 0.5
+                    print("[DD] Classifier logit=\(logit) sigmoid=\(sigmoid) → \(hasDamage ? "damage" : "no_damage")")
+                    continuation.resume(returning: hasDamage ? .hasDamage : .noDamage)
                     return
                 }
 
