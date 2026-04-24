@@ -19,7 +19,6 @@
 /* Begin PBXFileReference section */
 		799BFA112F99ECA30053B971 /* DD-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "DD-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		79A48E292F8721180097CE8B /* DD-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DD-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		79A48E392F87217B0097CE8B /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -56,7 +55,6 @@
 		79A48E202F8721180097CE8B = {
 			isa = PBXGroup;
 			children = (
-				79A48E392F87217B0097CE8B /* CLAUDE.md */,
 				79A48E2B2F8721180097CE8B /* DD-iOS */,
 				799BFA122F99ECA30053B971 /* DD-iOSTests */,
 				79A48E2A2F8721180097CE8B /* Products */,

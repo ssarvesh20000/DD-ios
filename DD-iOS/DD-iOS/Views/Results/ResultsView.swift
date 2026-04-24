@@ -24,6 +24,10 @@ struct ResultsView: View {
                                 )
                             }
                         }
+
+                        if viewModel.state == .analyzing {
+                            AnalyzingOverlay()
+                        }
                     }
                 }
                 .aspectRatio(image.size.width / image.size.height, contentMode: .fit)
@@ -36,7 +40,7 @@ struct ResultsView: View {
                     case .idle:
                         EmptyView()
                     case .analyzing:
-                        ProgressView("Analyzing image...")
+                        AnalysisLogView()
                     case .noDamage:
                         Label("No damage detected", systemImage: "checkmark.seal.fill")
                             .font(.title3.bold())
