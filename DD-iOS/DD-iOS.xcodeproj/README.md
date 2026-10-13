@@ -12,7 +12,7 @@ A fast, on‑device app that detects visible car damage in a photo.
 - Image input via camera, photo library, or Files.
 - A YOLO‑style detector (`DamageDetector.mlpackage`) returns bounding boxes, labels, and confidences for specific damage types.
 - If no boxes are returned above the confidence threshold, the image is reported as undamaged.
-- Vision + Core ML handle preprocessing/inference; results are normalized to [0..1] with top‑left origin for overlays.
+- The photo is letterboxed to 640x640 (like ultralytics), Vision + Core ML run inference, and boxes are mapped back to the original image, normalized to [0..1] with top‑left origin for overlays.
 - SwiftUI drives the UI with light/dark theming; async/await wraps Vision requests; state updates trigger the results view.
 
 ## Quick start
@@ -24,7 +24,7 @@ A fast, on‑device app that detects visible car damage in a photo.
 
 ## Limitations & potential solutions
 - iOS version vs APIs: `@Observable` requires iOS 17+. If targeting older iOS, switch to `ObservableObject` and adjust navigation/sharing APIs; otherwise set min iOS to 17.
-- Box alignment with Vision scaling: Using `.scaleFill` can crop; switch to `.scaleFit` or account for crop offsets when mapping boxes to the displayed image.
+- Preprocessing: photos are letterboxed to 640x640 (aspect ratio kept, gray 114 padding, orientation applied) to match how the detector was trained with ultralytics; boxes are mapped back to the original image in `ViewModels/Letterbox.swift` (unit tests in `DD-iOSTests/LetterboxTests.swift`).
 - Sharing annotated image: Render the overlay into a new image (e.g., `ImageRenderer`) and share that instead of the original.
 - Performance on older devices: Consider a smaller detector input or model quantization.
 - History persistence: `HistoryView` is a placeholder — wire up a SwiftData / Core Data store so prior scans land there with source image, detections, and timestamp.
