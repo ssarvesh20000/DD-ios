@@ -25,6 +25,8 @@ struct HistoryView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("historyEmptyState")
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
