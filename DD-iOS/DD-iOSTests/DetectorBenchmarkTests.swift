@@ -12,13 +12,23 @@ import UIKit
 final class DetectorBenchmarkTests: XCTestCase {
 
     func testBenchmarkCarDDTestSplit() async throws {
-        // Load all jpg/png images from the bundled folder
+        // Load all jpg/jpeg/png images from the test bundle. Look both at the bundle
+        // root (synchronized folder groups copy resources flat) and in "images/"
+        // (blue folder reference), for every extension, de-duplicated by filename.
         let bundle = Bundle(for: type(of: self))
-        let jpgs = bundle.urls(forResourcesWithExtension: "jpg", subdirectory: nil) ?? []
-        let pngs = bundle.urls(forResourcesWithExtension: "png", subdirectory: "images") ?? []
-        let imageURLs = (jpgs + pngs).sorted { $0.lastPathComponent < $1.lastPathComponent }
+        var seen = Set<String>()
+        var imageURLs: [URL] = []
+        for ext in ["jpg", "jpeg", "png"] {
+            for subdirectory in [nil, "images"] as [String?] {
+                let urls: [URL] = bundle.urls(forResourcesWithExtension: ext, subdirectory: subdirectory) ?? []
+                for url in urls where seen.insert(url.lastPathComponent).inserted {
+                    imageURLs.append(url)
+                }
+            }
+        }
+        imageURLs.sort { $0.lastPathComponent < $1.lastPathComponent }
 
-        XCTAssertFalse(imageURLs.isEmpty, "No test images found. Check that the 'images' folder is a blue folder reference in the test target.")
+        XCTAssertFalse(imageURLs.isEmpty, "No test images found in the test bundle root or its 'images' folder.")
         print("[Benchmark] Found \(imageURLs.count) images")
 
         // CSV header

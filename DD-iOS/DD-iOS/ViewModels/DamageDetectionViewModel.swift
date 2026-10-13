@@ -55,15 +55,24 @@ class DamageDetectionViewModel {
     func analyze(image: UIImage) async {
         state = .analyzing
 
-        guard let cgImage = Self.forceCGImage(from: image) else {
-            print("[DD] Could not get CGImage from UIImage")
+        // Letterbox to the model's 640x640 input the same way ultralytics does
+        // (keep aspect ratio, pad with gray 114) instead of stretching.
+        let sourceSize = Letterbox.pixelSize(of: image)
+        guard sourceSize.width > 0, sourceSize.height > 0 else {
+            print("[DD] Image has zero size")
+            state = .noDamage
+            return
+        }
+        let geometry = LetterboxGeometry(sourceSize: sourceSize, targetSide: Self.modelInputSide)
+        guard let letterboxed = Letterbox.render(image, geometry: geometry) else {
+            print("[DD] Could not render letterboxed CGImage")
             state = .noDamage
             return
         }
 
-        print("[DD] Got CGImage: \(cgImage.width)x\(cgImage.height)")
+        print("[DD] Source \(Int(sourceSize.width))x\(Int(sourceSize.height)) -> letterboxed \(letterboxed.width)x\(letterboxed.height), content \(geometry.contentRect)")
 
-        let detections = await runDetector(on: cgImage)
+        let detections = await runDetector(on: letterboxed, geometry: geometry)
 
         if detections.isEmpty {
             state = .noDamage
@@ -75,7 +84,12 @@ class DamageDetectionViewModel {
     
     // MARK: - Detector
 
-    private func runDetector(on cgImage: CGImage) async -> [Detection] {
+    /// DamageDetector.mlpackage input size (640x640).
+    static let modelInputSide: CGFloat = 640
+
+    /// `cgImage` must already be letterboxed to a square; boxes are mapped back
+    /// to the original image with `geometry`.
+    private func runDetector(on cgImage: CGImage, geometry: LetterboxGeometry) async -> [Detection] {
         guard let model = detectorModel else {
             print("[DD] Detector model not loaded")
             return []
@@ -106,19 +120,15 @@ class DamageDetectionViewModel {
                 let detections = observations.compactMap { observation -> Detection? in
                     guard let topLabel = observation.labels.first else { return nil }
 
-                    // Vision gives boundingBox with origin at bottom-left — flip Y for top-left
-                    let box = observation.boundingBox
-                    let flipped = CGRect(
-                        x: box.origin.x,
-                        y: 1.0 - box.origin.y - box.height,
-                        width: box.width,
-                        height: box.height
-                    )
+                    // Vision gives boundingBox with origin at bottom-left — flip Y for top-left,
+                    // then undo the letterbox padding/scale to get original-image coordinates
+                    let flipped = Letterbox.topLeftFromVision(observation.boundingBox)
+                    guard let box = geometry.unletterbox(flipped) else { return nil }
 
                     return Detection(
                         label: topLabel.identifier,
                         confidence: topLabel.confidence,
-                        boundingBox: flipped
+                        boundingBox: box
                     )
                 }
 
@@ -126,6 +136,8 @@ class DamageDetectionViewModel {
                 continuation.resume(returning: detections)
             }
 
+            // The input is already a 640x640 square, so scaleFill is a no-op resize
+            // (no stretching, no cropping). Letterboxing happened in analyze().
             request.imageCropAndScaleOption = .scaleFill
 
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
@@ -136,18 +148,5 @@ class DamageDetectionViewModel {
                 continuation.resume(returning: [])
             }
         }
-    }
-
-    // MARK: - Helpers
-
-    private static func forceCGImage(from image: UIImage) -> CGImage? {
-        if let cg = image.cgImage { return cg }
-        // Redraw to produce a CGImage (handles HEIC, CIImage-backed, etc.)
-        let size = image.size
-        UIGraphicsBeginImageContextWithOptions(size, false, image.scale)
-        image.draw(in: CGRect(origin: .zero, size: size))
-        let redrawn = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-        return redrawn?.cgImage
     }
 }
