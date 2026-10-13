@@ -52,6 +52,7 @@ struct HomeView: View {
                     HistoryCard {
                         navigateToHistory = true
                     }
+                    .accessibilityIdentifier("historyCard")
                     .padding(.top, 20)
 
                     // Primary CTA
@@ -68,6 +69,7 @@ struct HomeView: View {
                             .shadow(color: theme.accent.opacity(scheme == .dark ? 0 : 0.22),
                                     radius: 14, x: 0, y: 4)
                     }
+                    .accessibilityIdentifier("takePhotoButton")
                     .padding(.top, 16)
 
                     // Secondary row
@@ -83,6 +85,7 @@ struct HomeView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
+                        .accessibilityIdentifier("choosePhotoButton")
                         Button {
                             showFileImporter = true
                         } label: {
@@ -94,6 +97,7 @@ struct HomeView: View {
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(theme.border, lineWidth: 1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
+                        .accessibilityIdentifier("chooseFileButton")
                     }
                     .padding(.top, 10)
 
@@ -105,6 +109,7 @@ struct HomeView: View {
                 .padding(.bottom, 24)
             }
             .background(theme.bg.ignoresSafeArea())
+            .onAppear(perform: loadUITestImageIfRequested)
             .fullScreenCover(isPresented: $showCamera) {
                 // TODO: move the "close-up in good lighting" framing tip into CameraView
                 // as an overlay (previously a Home subheading).
@@ -137,6 +142,18 @@ struct HomeView: View {
                 HistoryView()
             }
         }
+    }
+
+    /// UI tests (simulator, Debug builds only): launch with the environment variable
+    /// DD_UITEST_IMAGE=<absolute path to an image> to open Results for that image
+    /// without going through the camera or the photo picker.
+    private func loadUITestImageIfRequested() {
+        #if DEBUG
+        guard selectedImage == nil,
+              let path = ProcessInfo.processInfo.environment["DD_UITEST_IMAGE"],
+              let image = UIImage(contentsOfFile: path) else { return }
+        selectedImage = image
+        #endif
     }
 }
 

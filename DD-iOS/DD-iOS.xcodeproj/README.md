@@ -21,6 +21,7 @@ A fast, on‑device app that detects visible car damage in a photo.
 
 ## Testing
 - `DD-iOSTests/DetectorBenchmarkTests.swift` runs the detector across a bundled image set and writes a CSV (`cardd_ios_benchmark.csv`) to the temporary directory for offline analysis.
+- `DD-iOSUITests/DamageDoctorFlowUITests.swift` covers the Home → Results / History flow using the views' accessibility identifiers. It needs a UI Testing Bundle target named `DD-iOSUITests` (not in the project yet). Results tests inject a photo with the Debug-only `DD_UITEST_IMAGE` launch environment variable (simulator only).
 
 ## Limitations & potential solutions
 - iOS version vs APIs: `@Observable` requires iOS 17+. If targeting older iOS, switch to `ObservableObject` and adjust navigation/sharing APIs; otherwise set min iOS to 17.

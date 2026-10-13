@@ -14,6 +14,7 @@ struct ResultsView: View {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
+                            .accessibilityIdentifier("resultImage")
 
                         if case .damageFound(let detections) = viewModel.state {
                             ForEach(detections) { detection in
@@ -32,6 +33,8 @@ struct ResultsView: View {
                 }
                 .aspectRatio(image.size.width / image.size.height, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("annotatedImage")
                 .padding(.horizontal)
 
                 // Status / results
@@ -41,10 +44,12 @@ struct ResultsView: View {
                         EmptyView()
                     case .analyzing:
                         AnalysisLogView()
+                            .accessibilityIdentifier("analyzingState")
                     case .noDamage:
                         Label("No damage detected", systemImage: "checkmark.seal.fill")
                             .font(.title3.bold())
                             .foregroundStyle(.green)
+                            .accessibilityIdentifier("resultState")
                     case .damageFound(let detections):
                         detectionsList(detections)
                     }
@@ -59,6 +64,7 @@ struct ResultsView: View {
             if case .damageFound = viewModel.state {
                 ToolbarItem(placement: .topBarTrailing) {
                     ShareLink(item: Image(uiImage: image), preview: SharePreview("Damage Report", image: Image(uiImage: image)))
+                        .accessibilityIdentifier("shareButton")
                 }
             }
         }
@@ -71,6 +77,7 @@ struct ResultsView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Damage Found")
                 .font(.title3.bold())
+                .accessibilityIdentifier("resultState")
 
             ForEach(detections) { detection in
                 HStack {
@@ -88,8 +95,12 @@ struct ResultsView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("detectionRow")
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("detectionList")
     }
 }
 
@@ -116,6 +127,8 @@ struct BoundingBoxOverlay: View {
                 .offset(y: -20)
         }
         .position(x: displayRect.midX, y: displayRect.midY)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("boundingBox")
     }
 
     private func mapToView() -> CGRect {
